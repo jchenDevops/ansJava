@@ -1,0 +1,21 @@
+---
+# vars file for .
+
+fmw:
+  owner:       weblogic
+  uid:         506
+  group:       bea
+  gid:         108
+  group_extra:
+
+java:
+  version: 
+  parent_home_path : "/opt/middleware"
+  #java_installer_file : "{{ oracle_binaries_mount }}/java/jdk-7u51-linux-x64.tar.gz"  
+  #java_installer_file : "{{ oracle_binaries_mount }}/java/jdk-7u80-linux-x64.tar.gz"
+  installer_file : "jdk-7u80-linux-x64.tar.gz"
+  #java_installer_file : "{{ oracle_binaries_mount }}/java/jdk-8u45-linux-x64.tar.gz"
+  #java_version : "jdk1.7.0_51"
+  #java_version : "jdk1.7.0_95"
+  #java_version : "jdk1.8.0_45"
+  home : "{{ java_parent_home_path }}/{{ java_version }}"

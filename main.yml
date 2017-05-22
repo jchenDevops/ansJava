@@ -1,0 +1,15 @@
+---
+
+- name: Installing Java executable
+  hosts: all
+  become: true
+  serial: 1
+
+  vars_files:
+    - [ "vars/main.yml" ]
+
+  tasks:
+    - include: tasks/main.yml
+
+  roles:  
+  

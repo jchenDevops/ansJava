@@ -1,0 +1,40 @@
+---
+# tasks file for tasks/main.yml
+
+  - name: Create group for Java binary user
+    group: "name={{ fmw.group }} gid={{ fmw.gid }} state=present"
+    when: fmw.gid is defined
+    become_user: root   
+
+  - name: Create user for Java binary user with extra groups
+    user: "name={{ fmw.owner }} uid={{ fmw.uid }} group={{ fmw.group }} groups={{ fmw.group_extra }} append=yes comment='Oracle Binary Owner' state=present shell=/bin/bash"
+    when: fmw.uid is defined and fmw.group_extra is defined
+    become_user: root
+  
+#  to do:
+#- name: Test if Java binary user group is set correctly
+
+  - name: Make java directory
+    file: path="{{ java.parent_home_path }}" state=directory mode="u+rwx,g+rx,o+rx"
+    become_user: root
+  
+  - name: Install Java JDK
+    unarchive: src={{ java.installer_file }} dest={{ java.parent_home_path }} creates={{ java.parent_home_path }}/logs/java.installed copy=no
+    become_user: "{{ fmw.owner }}"
+
+  - stat: path="{{ java.parent_home_path }}/latest"
+    register: java.latest  
+  
+  - name: Make Java symbolic links
+    file: src={{ item.src }} dest={{ item.dest }} state=link force=yes
+    with_items:
+      - { src: "{{ java.parent_home_path }}/{{ java.version }}" , dest: "{{ java.parent_home_path }}/latest" }
+      - { src: "{{ java.parent_home_path }}/latest" , dest: "{{ java.parent_home_path }}/default" }
+    when: not java.latest.stat.exists
+    become_user: "{{ fmw.owner }}"
+
+  - name: Set Java random generator to non-blocking
+    replace: dest="{{ java.parent_home_path }}/{{ java.version }}/jre/lib/security/java.security" 
+             regexp="^(securerandom.source=file:)/dev/urandom$" 
+             replace="\1/dev/./urandom"
+    become_user: "{{ fmw.owner }}"  
