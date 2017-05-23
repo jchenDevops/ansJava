@@ -1,40 +1,62 @@
 ---
 # tasks file for tasks/main.yml
-
+# Beginning of section for root 
   - name: Create group for Java binary user
     group: "name={{ fmw.group }} gid={{ fmw.gid }} state=present"
     when: fmw.gid is defined
-    become_user: root   
+    become_user: root
+    ignore_errors: yes
 
   - name: Create user for Java binary user with extra groups
-    user: "name={{ fmw.owner }} uid={{ fmw.uid }} group={{ fmw.group }} groups={{ fmw.group_extra }} append=yes comment='Oracle Binary Owner' state=present shell=/bin/bash"
+    user: "name={{ fmw.owner }} uid={{ fmw.uid }} group={{ fmw.group }} groups={{ fmw.group_extra }} home={{ java.parent_home_path }} append=yes comment='Oracle Binary Owner' state=present shell=/bin/bash"
     when: fmw.uid is defined and fmw.group_extra is defined
     become_user: root
-  
-#  to do:
-#- name: Test if Java binary user group is set correctly
+    ignore_errors: yes
 
   - name: Make java directory
-    file: path="{{ java.parent_home_path }}" state=directory mode="u+rwx,g+rx,o+rx"
+    file: path="{{ java.parent_home_path }}" state=directory owner={{ fmw.owner }} group={{ fmw.group }} mode="u+rwx,g+rx,o+rx"
     become_user: root
-  
-  - name: Install Java JDK
-    unarchive: src={{ java.installer_file }} dest={{ java.parent_home_path }} creates={{ java.parent_home_path }}/logs/java.installed copy=no
-    become_user: "{{ fmw.owner }}"
+    ignore_errors: yes
+ 
+# End of section for root 
 
-  - stat: path="{{ java.parent_home_path }}/latest"
-    register: java.latest  
+  - name: Check Java binary file system permission
+    stat: path="{{ java.parent_home_path }}"
+    register: st
+
+  - fail: msg="Java Home permission - Owner of {{ java.parent_home_path }} should be {{ fmw.uid }}"
+    when: st.stat.uid != {{ fmw.uid }}
+
+  - fail: msg="Java Home permission - Group of {{ java.parent_home_path }} should be {{ fmw.gid }}"
+    when: st.stat.gid != {{ fmw.gid }}
+
+  - name: Set Java Home permission
+    file: path="{{ java.parent_home_path }}" state=directory owner={{ fmw.owner }} group={{ fmw.group }} mode="u+rwx,g+rx,o+rx"      
+    when: st.stat.mode != "0755"
+    
+  - name: Get Java Version
+    shell: echo "{{ java.installer_file }}" | cut -d- -f2 | awk -Fu '{print "jdk1."$1".0_"$2}'
+    register: output
+
+  - set_fact:
+      java_version: "{{ output.stdout }}"
+      
+  - debug:
+      msg: "# Java version: {{ java_version }}"
+      
+  - name: Install Java JDK
+    unarchive: src={{ java.installer_path }}/{{ java.installer_file }} dest={{ java.parent_home_path }} creates={{ java.parent_home_path }}/{{ java_version }}/bin/java copy=no    
+    become_user: "{{ fmw.owner }}"  
   
   - name: Make Java symbolic links
     file: src={{ item.src }} dest={{ item.dest }} state=link force=yes
     with_items:
-      - { src: "{{ java.parent_home_path }}/{{ java.version }}" , dest: "{{ java.parent_home_path }}/latest" }
-      - { src: "{{ java.parent_home_path }}/latest" , dest: "{{ java.parent_home_path }}/default" }
-    when: not java.latest.stat.exists
+      - { src: "{{ java.parent_home_path }}/{{ java_version }}" , dest: "{{ java.parent_home_path }}/jdk" }      
+    #when: not java.latest.stat.exists
     become_user: "{{ fmw.owner }}"
 
   - name: Set Java random generator to non-blocking
-    replace: dest="{{ java.parent_home_path }}/{{ java.version }}/jre/lib/security/java.security" 
+    replace: dest="{{ java.parent_home_path }}/{{ java_version }}/jre/lib/security/java.security" 
              regexp="^(securerandom.source=file:)/dev/urandom$" 
              replace="\1/dev/./urandom"
-    become_user: "{{ fmw.owner }}"  
+    become_user: "{{ fmw.owner }}"

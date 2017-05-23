@@ -3,6 +3,10 @@ Role Name
 
 This role is installing Java into a Linux. The user is non-root. Functions includes check files system, users, and verification.
 
+##### Usage:
+
+`ansible-playbook -vv main.yml -i hosts-lit --ask-pass`
+
 Requirements
 ------------
 
