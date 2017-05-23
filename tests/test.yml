@@ -10,6 +10,5 @@
   tasks:
     - include: tasks/main.yml
 
-  roles:  
+  roles:
     - ansJava
-  
