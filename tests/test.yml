@@ -1,9 +1,6 @@
 ---
-
-- name: Installing Java executable
-  hosts: localhost
-  serial: 1
-
+  hosts: hosts
+  remote_user: root
   vars_files:
     - [ "vars/main.yml" ]
 
@@ -11,4 +8,4 @@
     - include: tasks/main.yml
 
   roles:
-    - ansJava
+  
